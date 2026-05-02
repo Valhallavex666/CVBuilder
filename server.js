@@ -76,7 +76,7 @@ const auth = (req, res, next) => {
 
 // --- 3. FUNGSI UTAMA AI ---
 async function askAI(prompt, retries = 3) {
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
     let delay = 2000;
 
     for (let i = 0; i < retries; i++) {
