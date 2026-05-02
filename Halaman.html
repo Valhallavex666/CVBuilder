@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS CV Generator AI</title>
+    <script>
+        // Ini adalah satpam. Kalau belum login, langsung tendang ke halaman login.
+        fetch('/api/cv/list').then(res => {
+            if (!res.ok) {
+                window.location.replace('/login.html');
+            } else {
+                // Kalau sudah login, baru tampilkan halamannya
+                document.body.style.display = 'flex';
+            }
+        });
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cv-preview { font-family: 'Arial', sans-serif; color: #111; }
+        
+        /* Template 1-4 & 6 (Standar) */
+        .template-1 { text-align: left; border-top: 5px solid #333; }
+        .template-2 { text-align: center; font-family: 'Times New Roman', serif; }
+        .template-2 .cv-header { border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .template-3 { border-left: 10px solid #2b6cb0; padding-left: 20px; }
+        .template-4 { text-align: left; background-color: white; }
+        .template-6 { font-family: 'Georgia', serif; }
+        .template-6 h2 { text-transform: uppercase; border-bottom: 1px solid #ccc; }
+
+        /* TEMPLATE 5 BARU: ATS PRO (Sesuai Gambar Edgar Mackenzie) */
+        .template-5 { font-family: 'Arial', sans-serif; color: #000; }
+        .template-5 .cv-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            border-top: 14px solid #222; /* Garis hitam tebal di atas */
+            padding-top: 24px; 
+            margin-bottom: 20px; 
+        }
+        .template-5 .name-box h1 { 
+            font-family: 'Georgia', serif; /* Font nama klasik/serif */
+            font-size: 2.2rem; 
+            letter-spacing: 1px; 
+            margin: 0; 
+            line-height: 1; 
+        }
+        .template-5 .name-box p { display: none; } /* Sembunyikan job title di bawah nama sesuai gambar */
+        .template-5 .contact-box { 
+            text-align: right; 
+            font-size: 0.85rem; 
+            line-height: 1.6; 
+            color: #333; 
+        }
+        .template-5 .cv-section-title { 
+            text-transform: uppercase; 
+            font-size: 0.95rem; 
+            font-weight: 800; 
+            border-bottom: 2px solid #000; /* Garis bawah seksi tegas */
+            margin-top: 24px; 
+            margin-bottom: 12px; 
+            padding-bottom: 4px; 
+        }
+        .template-5 .cv-job-title { font-size: 0.95rem; color: #000; }
+        .template-5 .cv-company { font-size: 0.9rem; font-style: normal; font-weight: 700; color: #222; }
+        .template-5 .cv-desc { font-size: 0.85rem; color: #333; margin-top: 6px; }
+        .template-5 li { margin-bottom: 3px; }
+
+        /* PENGATURAN CETAK PDF */
+@media print {
+    @page { size: A4; margin: 0; }
+    body { display: block; background: white; }
+    .no-print { display: none !important; }
+    .w-1\/2 { width: 100% !important; } 
+    .bg-gray-400 { background-color: white !important; padding: 0 !important; }
+    .h-screen { height: auto !important; }
+    .overflow-y-auto { overflow: visible !important; }
+    
+    /* JAMINAN WARNA BACKGROUND & BORDER TERCETAK */
+    * { 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+    }
+
+    #cv-paper {
+        box-shadow: none !important;
+        /* Baris border: none !important; SUDAH DIHAPUS DARI SINI */
+        width: 210mm !important;
+        min-height: 297mm !important;
+        margin: 0 auto !important;
+    }
+}
+    </style>
+</head>
+<body class="bg-gray-100 flex h-screen" style="display: none;">
+
+    <div class="w-1/2 overflow-y-auto p-6 bg-white shadow-lg no-print">
+        <h1 class="text-2xl font-bold mb-4">AI CV ATS Builder</h1>
+        
+        <h2 class="font-bold text-lg border-b mb-2 mt-4">1. Kontak</h2>
+        <div class="grid grid-cols-2 gap-2">
+            <input type="text" id="name" placeholder="Nama Lengkap" class="border p-2 rounded w-full">
+            <input type="text" id="jobTitle" placeholder="Job Title" class="border p-2 rounded w-full">
+            <input type="text" id="phone" placeholder="No Handphone" class="border p-2 rounded w-full">
+            <input type="email" id="email" placeholder="Email" class="border p-2 rounded w-full">
+            <input type="text" id="address" placeholder="Alamat" class="border p-2 rounded w-full col-span-2">
+            <input type="text" id="city" placeholder="Kota" class="border p-2 rounded w-full">
+            <input type="text" id="zip" placeholder="Kode Pos" class="border p-2 rounded w-full">
+        </div>
+
+        <h2 class="font-bold text-lg border-b mb-2 mt-6">2. Pengalaman Kerja</h2>
+        <div id="exp-container"></div>
+        <button onclick="addExp()" class="bg-gray-800 text-white px-3 py-1 rounded text-sm mt-2">+ Tambah Pengalaman</button>
+
+        <h2 class="font-bold text-lg border-b mb-2 mt-6">3. Pendidikan</h2>
+        <div id="edu-container"></div>
+        <button onclick="addEdu()" class="bg-gray-800 text-white px-3 py-1 rounded text-sm mt-2">+ Tambah Pendidikan</button>
+
+        <h2 class="font-bold text-lg border-b mb-2 mt-6">4. Kemampuan Teknis</h2>
+        <textarea id="skills" class="border p-2 rounded w-full h-20" placeholder="Ketik manual atau klik Bantu AI..."></textarea>
+        <button onclick="generateAISkills(this)" class="bg-blue-500 text-white px-3 py-1 rounded text-sm mt-1">✨ Bantu AI</button>
+
+        <h2 class="font-bold text-lg border-b mb-2 mt-6">5. Deskripsi Diri</h2>
+        <textarea id="summary" class="border p-2 rounded w-full h-24" placeholder="Ketik manual atau klik Bantu AI..."></textarea>
+        <button onclick="generateAISummary(this)" class="bg-blue-500 text-white px-3 py-1 rounded text-sm mt-1">✨ Bantu AI</button>
+
+        <h2 class="font-bold text-lg border-b mb-2 mt-6">6. Info Tambahan (Opsional)</h2>
+        <input type="text" id="cert" placeholder="Sertifikasi" class="border p-2 rounded w-full mb-2">
+        <input type="text" id="lang" placeholder="Bahasa" class="border p-2 rounded w-full mb-2">
+        <input type="text" id="train" placeholder="Pelatihan" class="border p-2 rounded w-full mb-10">
+    </div>
+
+    <div class="w-1/2 p-6 bg-gray-400 overflow-y-auto">
+        <div class="flex justify-between items-center mb-4 no-print">
+            <select id="templateSelector" onchange="updatePreview()" class="border p-2 rounded bg-white font-bold text-blue-800">
+                <option value="template-1">1 - Standar ATS</option>
+                <option value="template-2">2 - Klasik Tengah</option>
+                <option value="template-3">3 - Garis Kiri</option>
+                <option value="template-4">4 - ATS Blue</option>
+                <option value="template-5">5 - ATS Pro</option>
+                <option value="template-6">6 - Elegan Teks</option>
+            </select>
+<!-- Bungkusan agar jarak antartombol rapi (gap-4) -->
+<div class="flex items-center gap-1">
+
+    <!-- 1. Tombol Full View -->
+    <button type="button" onclick="bukaFullView()" title="Lihat Full View" class="hover:scale-110 transition-transform duration-200">
+        <!-- NANTI GANTI NAMA FILE GAMBARNYA DI BAGIAN src="..." -->
+        <img src="Lup.png" alt="Full View" class="w-10 h-10 object-contain drop-shadow-md">
+    </button>
+
+    <!-- 2. Tombol Cetak & Simpan PDF -->
+    <!-- (Pastikan nama fungsi onclick-nya sesuai dengan milik Anda) -->
+    <button type="button" onclick="cetakDanSimpan()" title="Cetak & Simpan PDF" class="hover:scale-110 transition-transform duration-200">
+        <img src="Print.png" alt="Cetak PDF" class="w-10 h-10 object-contain drop-shadow-md">
+    </button>
+
+    <!-- 3. Tombol Arsip CV -->
+    <!-- (Pastikan fungsi onclick atau href-nya sesuai dengan milik Anda) -->
+    <button type="button" onclick="window.location.href='/History.html'" title="Buka Arsip CV" class="hover:scale-110 transition-transform duration-200">
+        <img src="Folder.png" alt="Arsip" class="w-10 h-10 object-contain drop-shadow-md">
+    </button>
+
+    <!-- 4. Tombol Logout -->
+    <!-- (Pastikan nama fungsi onclick-nya sesuai dengan milik Anda) -->
+    <button type="button" onclick="keluarAkun()" title="Keluar / Logout" class="hover:scale-110 transition-transform duration-200">
+        <img src="Logout.png" alt="Logout" class="w-10 h-10 object-contain drop-shadow-md">
+    </button>
+
+</div>
+        </div>
+
+        <div id="cv-paper" class="bg-white p-8 shadow-2xl min-h-[1056px] cv-preview template-1 mx-auto" style="width: 210mm;">
+            <div id="prev-header" class="cv-header mb-4"></div>
+            <div id="prev-summary" class="mb-4"></div>
+            <div id="prev-exp" class="mb-4"></div>
+            <div id="prev-edu" class="mb-4"></div>
+            <div id="prev-skills" class="mb-4"></div>
+            <div id="prev-extra"></div>
+        </div>
+    </div>
+
+    <script>
+        document.body.addEventListener('input', updatePreview);
+
+        function addExp() {
+            const container = document.getElementById('exp-container');
+            const div = document.createElement('div');
+            div.className = 'exp-item border p-4 mb-3 rounded bg-gray-50 relative';
+            div.innerHTML = `
+                <button onclick="this.parentElement.remove(); updatePreview()" class="absolute top-2 right-2 text-red-500 font-bold text-xs">HAPUS</button>
+                <input type="text" class="exp-job border p-2 rounded w-full mb-2" placeholder="Jabatan (Contoh: Web Developer)">
+                <input type="text" class="exp-company border p-2 rounded w-full mb-2" placeholder="Nama Perusahaan">
+                <input type="text" class="exp-duration border p-2 rounded w-full mb-2" placeholder="Periode (Contoh: Jan 2022 - Sekarang)">
+                <textarea class="exp-desc border p-2 rounded w-full mb-2 h-20" placeholder="Deskripsi Pekerjaan... (Gunakan - di awal kalimat untuk membuat list)"></textarea>
+                <button type="button" onclick="generateAIDesc(this)" class="bg-blue-500 text-white px-3 py-1 rounded text-xs">✨ Bantu AI</button>
+            `;
+            container.appendChild(div);
+            updatePreview();
+        }
+
+        function addEdu() {
+            const container = document.getElementById('edu-container');
+            const div = document.createElement('div');
+            div.className = 'edu-item border p-4 mb-3 rounded bg-gray-50 relative';
+            div.innerHTML = `
+                <button onclick="this.parentElement.remove(); updatePreview()" class="absolute top-2 right-2 text-red-500 font-bold text-xs">HAPUS</button>
+                <input type="text" class="edu-school border p-2 rounded w-full mb-2" placeholder="Nama Institusi / Universitas">
+                <input type="text" class="edu-major border p-2 rounded w-full mb-2" placeholder="Gelar & Jurusan (Cth: S1 Teknik Informatika)">
+                <input type="text" class="edu-loc border p-2 rounded w-full mb-2" placeholder="Lokasi (Contoh: Jakarta)">
+                <input type="text" class="edu-year border p-2 rounded w-full" placeholder="Tahun Lulus (Contoh: 2021)">
+            `;
+            container.appendChild(div);
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const tpl = document.getElementById('templateSelector').value;
+            document.getElementById('cv-paper').className = `bg-white p-8 shadow-2xl min-h-[1056px] cv-preview ${tpl} mx-auto`;
+
+            // ===== PASTE DARI SINI: INJEKSI KHUSUS TEMPLATE 4 =====
+            if (tpl === 'template-4') {
+                const name = document.getElementById('name').value || 'NAMA LENGKAP';
+                const title = document.getElementById('jobTitle').value || 'JOB TITLE';
+                const phone = document.getElementById('phone').value;
+                const email = document.getElementById('email').value;
+                const address = document.getElementById('address').value;
+                const city = document.getElementById('city').value;
+                const sum = document.getElementById('summary').value;
+                const skills = document.getElementById('skills').value;
+                const cert = document.getElementById('cert').value;
+                const train = document.getElementById('train').value;
+
+                let eduContent = '';
+                document.querySelectorAll('.edu-item').forEach(item => {
+                    const sch = item.querySelector('.edu-school').value;
+                    const maj = item.querySelector('.edu-major').value;
+                    const yr = item.querySelector('.edu-year').value;
+                    if(sch) eduContent += `<div class="mb-4"><div class="font-bold text-sm text-black">${sch}</div>${maj ? `<div class="text-sm italic text-gray-800">${maj}</div>` : ''}<div class="text-sm text-gray-600">${yr}</div></div>`;
+                });
+
+                let expContent = '';
+                document.querySelectorAll('.exp-item').forEach(item => {
+                    const job = item.querySelector('.exp-job').value;
+                    const comp = item.querySelector('.exp-company').value;
+                    const dur = item.querySelector('.exp-duration').value;
+                    const desc = item.querySelector('.exp-desc').value;
+                    if(job||comp) {
+                        let descHtml = `<div class="text-sm text-justify mt-1 text-gray-800">${desc}</div>`;
+                        if (/(?:^|\n)-\s*/.test(desc)) {
+                            let listItems = desc.split('\n').filter(l => l.trim()).map(l => `<li>${l.replace(/^-\s*/, '').trim()}</li>`).join('');
+                            descHtml = `<ul class="text-sm list-disc list-outside ml-4 mt-1 text-gray-800">${listItems}</ul>`;
+                        }
+                        expContent += `<div class="mb-5"><div class="font-bold text-sm text-black">${comp}</div><div class="text-sm text-gray-800 mb-1">${job} ${dur?'('+dur+')':''}</div>${descHtml}</div>`;
+                    }
+                });
+
+                let skillsContent = skills ? `<ul class="list-disc list-inside text-sm text-gray-800">` + skills.split(',').filter(s=>s.trim()).map(s => `<li>${s.trim()}</li>`).join('') + `</ul>` : '';
+
+                document.getElementById('cv-paper').style.padding = "0"; // Buang padding agar warna header full
+                document.getElementById('cv-paper').innerHTML = `
+                    <div class="w-full flex flex-col">
+                        <div class="w-full h-8 bg-gray-300"></div>
+                        <div class="w-full bg-[#1e3a8a] py-8 flex flex-col items-center justify-center">
+                            <h1 class="text-[2.5rem] font-serif font-bold text-white uppercase tracking-wide leading-none">${name}</h1>
+                            <p class="mt-2 text-white uppercase tracking-[0.2em] text-sm">${title}</p>
+                        </div>
+                        <div class="w-full h-8 bg-gray-300 mb-6"></div>
+
+                        <div class="px-10 pb-10">
+                            <div class="grid grid-cols-[58%_38%] gap-[4%] mb-2">
+                                <div>
+                                    ${sum ? `<div class="mb-6"><h2 class="bg-[#e2e8f0] text-[#1e3a8a] px-4 py-1.5 font-bold uppercase tracking-widest text-sm mb-3">RINGKASAN</h2><div class="text-sm text-justify text-gray-800">${sum}</div></div>` : ''}
+                                    ${eduContent ? `<div class="mb-6"><h2 class="bg-[#e2e8f0] text-[#1e3a8a] px-4 py-1.5 font-bold uppercase tracking-widest text-sm mb-3">PENDIDIKAN</h2>${eduContent}</div>` : ''}
+                                    ${(cert||train) ? `<div class="mb-6"><h2 class="bg-[#e2e8f0] text-[#1e3a8a] px-4 py-1.5 font-bold uppercase tracking-widest text-sm mb-3">LAIN-LAIN</h2><div class="text-sm font-bold">${cert}</div><div class="text-sm text-gray-800">${train}</div></div>` : ''}
+                                </div>
+                                <div>
+                                    <div class="text-sm flex flex-col gap-3 mb-8 pl-2">
+                                        ${phone ? `<div><span class="text-[#1e3a8a] text-lg">📞</span> ${phone}</div>` : ''}
+                                        ${email ? `<div><span class="text-[#1e3a8a] text-lg">✉️</span> ${email}</div>` : ''}
+                                        ${(city||address) ? `<div><span class="text-[#1e3a8a] text-lg">📍</span> ${city}</div>` : ''}
+                                    </div>
+                                    ${skillsContent ? `<div class="mb-6"><h2 class="bg-[#e2e8f0] text-[#1e3a8a] px-4 py-1.5 font-bold uppercase tracking-widest text-sm mb-3">KETERAMPILAN</h2>${skillsContent}</div>` : ''}
+                                </div>
+                            </div>
+                            ${expContent ? `<div class="mt-2 w-full"><h2 class="bg-[#e2e8f0] text-[#1e3a8a] px-4 py-1.5 font-bold uppercase tracking-widest text-sm mb-4">PENGALAMAN KERJA</h2>${expContent}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                return; // Langsung stop eksekusi di sini khusus Template 4
+            } else {
+                // Restore kerangka untuk template lain jika berpindah dari template 4
+                document.getElementById('cv-paper').style.padding = "";
+                if(!document.getElementById('prev-header')) {
+                    document.getElementById('cv-paper').innerHTML = `
+                        <div id="prev-header" class="cv-header mb-4"></div>
+                        <div id="prev-summary" class="mb-4"></div>
+                        <div id="prev-exp" class="mb-4"></div>
+                        <div id="prev-edu" class="mb-4"></div>
+                        <div id="prev-skills" class="mb-4"></div>
+                        <div id="prev-extra"></div>
+                    `;
+                }
+            }
+            // ===== SAMPAI DI SINI =====
+
+            // (Kode asli Anda "1. Header" dst tetap di bawah sini, jangan dihapus)
+            // if (tpl === 'template-5') { ...
+
+            // 1. Header Dinamis
+            document.getElementById('prev-header').innerHTML = `
+                <div class="name-box">
+                    <h1 class="text-3xl font-bold uppercase">${document.getElementById('name').value || 'NAMA LENGKAP'}</h1>
+                    <p class="text-lg font-semibold">${document.getElementById('jobTitle').value || ''}</p>
+                </div>
+                <div class="contact-box text-sm">
+                    <div>${document.getElementById('address').value} ${document.getElementById('city').value} ${document.getElementById('zip').value}</div>
+                    <div>${document.getElementById('phone').value ? 'Phone: ' + document.getElementById('phone').value : ''}</div>
+                    <div>${document.getElementById('email').value ? 'Email: ' + document.getElementById('email').value : ''}</div>
+                </div>
+            `;
+
+            // 2. Summary
+            const sum = document.getElementById('summary').value;
+            document.getElementById('prev-summary').innerHTML = sum ? `<h2 class="cv-section-title text-lg font-bold border-b mt-4 mb-2">PROFESSIONAL SUMMARY</h2><div class="text-sm text-justify cv-desc">${sum}</div>` : '';
+
+            // 3. Experience (Bullet List Cerdas)
+            let expHtml = '<h2 class="cv-section-title text-lg font-bold border-b mt-4 mb-2">WORK EXPERIENCE</h2>';
+            document.querySelectorAll('.exp-item').forEach(item => {
+                const job = item.querySelector('.exp-job').value;
+                const comp = item.querySelector('.exp-company').value;
+                const dur = item.querySelector('.exp-duration').value;
+                const desc = item.querySelector('.exp-desc').value;
+                
+                if(job || comp) {
+                    let descHtml = `<div class="text-sm whitespace-pre-line text-justify cv-desc">${desc}</div>`;
+                    
+                    // Regex Super Cerdas: Mendeteksi strip dengan atau tanpa spasi
+                    if (/(?:^|\n)-\s*/.test(desc)) {
+                        let listItems = desc.split('\n')
+                            .map(line => line.trim())
+                            .filter(line => line.length > 0)
+                            .map(line => {
+                                let text = line.replace(/^-\s*/, '').trim(); // Hapus strip di depan kalimat
+                                return `<li class="pl-1">${text}</li>`;
+                            }).join('');
+                        descHtml = `<ul class="text-sm text-justify list-disc list-outside ml-5 cv-desc">${listItems}</ul>`;
+                    }
+
+                    expHtml += `
+                        <div class="mb-5">
+                            <div class="flex justify-between font-bold cv-job-title"><span>${job}</span><span>${dur}</span></div>
+                            <div class="text-sm italic cv-company">${comp}</div>
+                            ${descHtml}
+                        </div>
+                    `;
+                }
+            });
+            document.getElementById('prev-exp').innerHTML = expHtml;
+
+            // 4. Education
+            let eduHtml = '<h2 class="cv-section-title text-lg font-bold border-b mt-4 mb-2">EDUCATION</h2>';
+            document.querySelectorAll('.edu-item').forEach(item => {
+                const school = item.querySelector('.edu-school').value;
+                const major = item.querySelector('.edu-major').value; // Mengambil data Jurusan
+                const loc = item.querySelector('.edu-loc').value;
+                const year = item.querySelector('.edu-year').value;
+                
+                if(school) {
+                    // Jika jurusan diisi, tampilkan cetak miring (italic)
+                    let majorHtml = major ? `<div class="italic text-sm text-gray-800">${major}</div>` : '';
+                    
+                    eduHtml += `
+                        <div class="mb-3">
+                            <div class="flex justify-between font-bold text-sm cv-school"><span>${school}</span><span>${year}</span></div>
+                            ${majorHtml}
+                            <div class="text-sm cv-loc">${loc}</div>
+                        </div>
+                    `;
+                }
+            });
+            document.getElementById('prev-edu').innerHTML = eduHtml;
+
+            // 5. Skills
+            const skills = document.getElementById('skills').value;
+            document.getElementById('prev-skills').innerHTML = skills ? `<h2 class="cv-section-title text-lg font-bold border-b mt-4 mb-2">TECHNICAL SKILLS</h2><div class="text-sm text-justify cv-desc">${skills}</div>` : '';
+
+            // 6. Extra
+            let extraHtml = '';
+            if(document.getElementById('cert').value) extraHtml += `<b>Sertifikasi:</b> ${document.getElementById('cert').value}<br>`;
+            if(document.getElementById('lang').value) extraHtml += `<b>Bahasa:</b> ${document.getElementById('lang').value}<br>`;
+            if(document.getElementById('train').value) extraHtml += `<b>Pelatihan:</b> ${document.getElementById('train').value}`;
+            document.getElementById('prev-extra').innerHTML = extraHtml ? `<h2 class="cv-section-title text-lg font-bold border-b mt-4 mb-2">ADDITIONAL INFORMATION</h2><div class="text-sm cv-desc">${extraHtml}</div>` : '';
+        }
+
+        async function fetchAI(endpoint, bodyData, btnElement) {
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "...";
+            try {
+                const res = await fetch(`http://localhost:3000/api/ai/${endpoint}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(bodyData)
+                });
+                const data = await res.json();
+                btnElement.innerText = originalText;
+                return data.text;
+            } catch (err) {
+                btnElement.innerText = originalText;
+                alert("Server tidak merespon. Pastikan node server.js berjalan.");
+                return "";
+            }
+        }
+
+        async function generateAIDesc(btn) {
+            const parent = btn.parentElement;
+            const title = parent.querySelector('.exp-job').value;
+            const company = parent.querySelector('.exp-company').value;
+            if(!title || !company) return alert("Isi Jabatan dan Perusahaan!");
+            parent.querySelector('.exp-desc').value = await fetchAI('job-desc', {title, company}, btn);
+            updatePreview();
+        }
+
+        async function generateAISkills(btn) {
+            const jobs = Array.from(document.querySelectorAll('.exp-job')).map(i => i.value).filter(v => v).join(', ');
+            const schools = Array.from(document.querySelectorAll('.edu-school')).map(i => i.value).filter(v => v).join(', ');
+            document.getElementById('skills').value = await fetchAI('skills', {jobs, education: schools}, btn);
+            updatePreview();
+        }
+
+        async function generateAISummary(btn) {
+            const name = document.getElementById('name').value;
+            const title = document.getElementById('jobTitle').value;
+            const skills = document.getElementById('skills').value;
+            if(!name || !title) return alert("Isi Nama dan Job Title!");
+            document.getElementById('summary').value = await fetchAI('summary', {name, title, skills}, btn);
+            updatePreview();
+        }
+        async function cetakDanSimpan() {
+            // 1. Ambil nama
+            const nama = document.getElementById('name')?.value || "Tanpa Nama";
+            const judulCV = "CV " + nama; // Format diubah jadi "CV Nama"
+
+            // 2. Kumpulkan Pengalaman Kerja
+            const arrayPengalaman = [];
+            document.querySelectorAll('.exp-item').forEach(item => {
+                arrayPengalaman.push({
+                    job: item.querySelector('.exp-job').value,
+                    company: item.querySelector('.exp-company').value,
+                    duration: item.querySelector('.exp-duration').value,
+                    desc: item.querySelector('.exp-desc').value
+                });
+            });
+
+            // 3. Kumpulkan Pendidikan
+            const arrayPendidikan = [];
+            document.querySelectorAll('.edu-item').forEach(item => {
+                arrayPendidikan.push({
+                    school: item.querySelector('.edu-school').value,
+                    major: item.querySelector('.edu-major').value,
+                    loc: item.querySelector('.edu-loc').value,
+                    year: item.querySelector('.edu-year').value
+                });
+            });
+
+            // 4. Kumpulkan SEMUA data
+            const isiData = { 
+                // Kontak
+                nama: document.getElementById('name')?.value || "",
+                jobTitle: document.getElementById('jobTitle')?.value || "",
+                phone: document.getElementById('phone')?.value || "",
+                email: document.getElementById('email')?.value || "",
+                address: document.getElementById('address')?.value || "",
+                city: document.getElementById('city')?.value || "",
+                zipCode: document.getElementById('zipCode')?.value || "",
+
+                // Teks Biasa
+                summary: document.getElementById('summary')?.value || "",       
+                skills: document.getElementById('skills')?.value || "",         
+
+                // Data Dinamis Array
+                experience: arrayPengalaman,
+                education: arrayPendidikan
+            }; 
+
+            try {
+                await fetch('/api/cv/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ title: judulCV, content: isiData })
+                });
+                window.print();
+            } catch (error) {
+                console.error("Gagal menyimpan riwayat:", error);
+                window.print(); 
+            }
+        }
+
+        async function keluarAkun() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.replace('/login.html');
+        }
+        addExp();
+        addEdu();
+        // FITUR LOAD DATA CV DARI RIWAYAT (FULL KONTAK, PENGALAMAN & PENDIDIKAN)
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cvId = urlParams.get('id'); 
+            
+            if (cvId) {
+                try {
+                    const res = await fetch(`/api/cv/detail/${cvId}`);
+                    if (res.ok) {
+                        const dataCV = await res.json();
+                        const content = JSON.parse(dataCV.content); 
+                        
+                        // 1. Menyuntikkan data biasa (Kontak dll)
+                        if (content.nama && document.getElementById('name')) document.getElementById('name').value = content.nama;
+                        if (content.jobTitle && document.getElementById('jobTitle')) document.getElementById('jobTitle').value = content.jobTitle;
+                        if (content.phone && document.getElementById('phone')) document.getElementById('phone').value = content.phone;
+                        if (content.email && document.getElementById('email')) document.getElementById('email').value = content.email;
+                        if (content.address && document.getElementById('address')) document.getElementById('address').value = content.address;
+                        if (content.city && document.getElementById('city')) document.getElementById('city').value = content.city;
+                        if (content.zipCode && document.getElementById('zipCode')) document.getElementById('zipCode').value = content.zipCode;
+                        
+                        if (content.summary && document.getElementById('summary')) document.getElementById('summary').value = content.summary;
+                        if (content.skills && document.getElementById('skills')) document.getElementById('skills').value = content.skills;
+
+                        // 2. Menyuntikkan data Pengalaman Kerja
+                        if (content.experience && content.experience.length > 0) {
+                            const expContainer = document.getElementById('exp-container');
+                            if (expContainer) expContainer.innerHTML = ''; 
+
+                            content.experience.forEach(exp => {
+                                addExp(); 
+                                const items = document.querySelectorAll('.exp-item');
+                                const kotakBaru = items[items.length - 1];
+
+                                if (kotakBaru) {
+                                    kotakBaru.querySelector('.exp-job').value = exp.job || '';
+                                    kotakBaru.querySelector('.exp-company').value = exp.company || '';
+                                    kotakBaru.querySelector('.exp-duration').value = exp.duration || '';
+                                    kotakBaru.querySelector('.exp-desc').va
+                                    lue = exp.desc || '';
+                                }
+                            });
+                        }
+
+                        // 3. Menyuntikkan data Pendidikan
+                        if (content.education && content.education.length > 0) {
+                            const eduContainer = document.getElementById('edu-container');
+                            if (eduContainer) eduContainer.innerHTML = ''; 
+
+                            content.education.forEach(edu => {
+                                addEdu(); 
+                                const items = document.querySelectorAll('.edu-item');
+                                const kotakBaru = items[items.length - 1];
+
+                                if (kotakBaru) {
+                                    kotakBaru.querySelector('.edu-school').value = edu.school || '';
+                                    kotakBaru.querySelector('.edu-major').value = edu.major || '';
+                                    kotakBaru.querySelector('.edu-loc').value = edu.loc || '';
+                                    kotakBaru.querySelector('.edu-year').value = edu.year || '';
+                                }
+                            });
+                        }
+
+                        // Refresh tampilan pratinjau (jika ada)
+                        if (typeof updatePreview === 'function') updatePreview();
+                        
+                        // Menghapus ID dari URL agar bersih
+                        window.history.replaceState({}, document.title, "/"); 
+                    }
+                } catch (error) {
+                    console.error("Gagal memuat CV:", error);
+                }
+            }
+        });
+       // ==========================================
+        // FITUR FULL VIEW (PREVIEW SEMENTARA)
+        // ==========================================
+        function bukaFullView() {
+            const kertasAsli = document.getElementById('cv-paper'); 
+            
+            if (!kertasAsli) {
+                alert("Sistem tidak menemukan ID kertas CV Anda.");
+                return;
+            }
+
+            const modal = document.getElementById('modalFullView');
+            const wadahModal = document.getElementById('kertasFullView');
+
+            // 1. Copy isi HTML-nya
+            wadahModal.innerHTML = kertasAsli.innerHTML;
+            
+            // 2. KUNCI PERBAIKAN: Copy "Baju" (Class CSS) dari kertas asli
+            // Ini akan membawa warna background, font, dll dari Template 2,3,5,6
+            wadahModal.className = kertasAsli.className;
+
+            // 3. Tambahkan kembali class pelindung khusus untuk layar Full View
+            wadahModal.classList.add('shrink-0', 'shadow-2xl', 'pointer-events-none', 'bg-white');
+
+            // 4. Kunci ukuran kertas agar tetap gagah seperti F4
+            wadahModal.style.width = "210mm";
+            wadahModal.style.minHeight = "297mm";
+            wadahModal.style.position = "relative";
+
+            // 5. Atur Padding: Kalau Template 4 (padding 0) biarkan full, kalau template lain beri jarak aman
+            if (kertasAsli.style.padding === "0px" || kertasAsli.style.padding === "0") {
+                wadahModal.style.padding = "0";
+            } else {
+                wadahModal.style.padding = "10mm"; 
+            }
+
+            // 6. Munculkan layarnya
+            modal.classList.remove('hidden');
+        }
+        function tutupFullView() {
+            const modal = document.getElementById('modalFullView');
+            modal.classList.add('hidden');
+            
+            // Kosongkan lagi agar tidak membebani memori
+            document.getElementById('kertasFullView').innerHTML = '';
+        }
+    </script>
+    <!-- MODAL FULL VIEW -->
+    <div id="modalFullView" class="hidden fixed inset-0 z-[9999] bg-gray-900 bg-opacity-80 overflow-y-auto flex justify-center items-start pt-10 pb-10">
+    
+        <!-- Tombol Tutup -->
+        <button onclick="tutupFullView()" class="fixed top-5 right-5 bg-red-600 text-white px-5 py-2 rounded font-bold hover:bg-red-700 shadow-xl z-[10000]">
+            X Tutup Full View
+        </button>
+        
+        <!-- Area Kertas Bayangan (Tempat Copy-Paste Sementara) -->
+        <!-- 👇 INI KUNCINYA: Tambah shrink-0 dan paksa ukurannya jadi F4 👇 -->
+        <div id="kertasFullView" class="bg-white pointer-events-none shrink-0 shadow-2xl" style="width: 210mm; min-height: 297mm; position: relative;">
+            <!-- Isi CV akan otomatis tercopy ke sini -->
+        </div>
+    
+    </div>
+</body>
+</html>
