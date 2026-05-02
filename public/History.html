@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat CV - AI CV ATS Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 bg-white p-6 rounded shadow">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-600">Riwayat CV Saya</h1>
+                <p class="text-gray-500 mt-1">Daftar semua CV yang pernah Anda simpan.</p>
+            </div>
+            <button onclick="window.location.href='Halaman.html'" class="bg-gray-600 text-white px-5 py-2 rounded font-bold shadow hover:bg-gray-700 transition">
+                &larr; Kembali ke Pembuat CV
+            </button>
+        </div>
+
+        <!-- Kontainer Daftar CV -->
+        <div id="cvContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Data CV akan muncul di sini via JavaScript -->
+        </div>
+        
+        <!-- Pesan jika CV kosong -->
+        <div id="emptyMessage" class="hidden text-center mt-10">
+            <p class="text-xl text-gray-500 font-semibold mb-4">Anda belum menyimpan CV sama sekali.</p>
+            <button onclick="window.location.href='Halaman.html'" class="bg-blue-600 text-white px-6 py-3 rounded-full font-bold shadow hover:bg-blue-700">Buat CV Pertama Anda</button>
+        </div>
+    </div>
+
+    <script>
+        // Saat halaman dibuka, langsung ambil data dari server
+        document.addEventListener('DOMContentLoaded', fetchHistory);
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch('/api/cv/list');
+                
+                // Kalau belum login, lempar ke login
+                if (!res.ok) return window.location.replace('/login.html'); 
+                
+                const cvs = await res.json();
+                renderCVs(cvs);
+            } catch (error) {
+                console.error("Gagal mengambil data:", error);
+            }
+        }
+
+        function renderCVs(cvs) {
+            const container = document.getElementById('cvContainer');
+            const emptyMessage = document.getElementById('emptyMessage');
+            
+            container.innerHTML = ''; // Bersihkan kontainer
+
+            if (cvs.length === 0) {
+                emptyMessage.classList.remove('hidden');
+                return;
+            }
+
+            cvs.forEach(cv => {
+                // --- KODE ANTI-ERROR ---
+                let tgl = "Tanggal tidak diketahui";
+                let jam = "";
+                
+                // Cek apakah database mengirimkan tanggal (created_at)
+                if (cv.created_at) {
+                    const safeDate = cv.created_at.replace(' ', 'T') + 'Z';
+                    const dateObj = new Date(safeDate);
+                    tgl = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                    jam = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                }
+
+                const card = document.createElement('div');
+                card.className = "bg-white p-6 rounded shadow border-l-4 border-blue-600 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <!-- Ikon PDF Merah -->
+                        <div class="bg-red-100 p-3 rounded-lg">
+                            <svg class="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">${cv.title}</h2>
+                            <p class="text-sm text-gray-500 mt-1">Dibuat: ${tgl} ${jam ? 'pukul ' + jam : ''}</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex gap-2 border-t pt-4">
+                        <button onclick="window.location.href='Halaman.html?id=${cv.id}'" class="bg-green-100 text-green-700 px-4 py-2 rounded font-semibold flex-grow hover:bg-green-200">Lihat / Cetak Ulang</button>
+                        <button onclick="hapusCV(${cv.id}, '${cv.title}')" class="bg-red-100 text-red-700 px-4 py-2 rounded font-semibold hover:bg-red-200">Hapus Arsip</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function hapusCV(id, title) {
+            const yakin = confirm(`Apakah Anda yakin ingin menghapus "${title}"?`);
+            if (!yakin) return;
+
+            const res = await fetch(`/api/cv/delete/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                alert('CV berhasil dihapus!');
+                fetchHistory(); // Refresh daftar CV setelah dihapus
+            } else {
+                alert('Gagal menghapus CV.');
+            }
+        }
+    </script>
+</body>
+</html>

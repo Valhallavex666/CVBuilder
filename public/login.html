@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masuk / Daftar - AI CV ATS Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen py-10 relative overflow-hidden">
+
+    <!-- KOTAK FORM LOGIN -->
+    <div id="loginBox" class="bg-white p-8 rounded shadow-xl w-96 absolute transition-all duration-300 transform scale-100 opacity-100 z-10">
+        <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">Masuk Akun</h2>
+        
+        <input type="text" id="loginUser" placeholder="Username" class="border w-full p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <input type="password" id="loginPass" placeholder="Password" class="border w-full p-2 mb-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+        
+        <div class="text-right mb-4">
+            <button onclick="switchForm('forgot')" class="text-sm text-red-500 hover:text-red-700 font-semibold">Lupa Password?</button>
+        </div>
+        
+        <button onclick="handleLogin()" class="bg-blue-600 text-white w-full py-2 rounded mb-4 font-bold hover:bg-blue-700 transition duration-200">Masuk</button>
+        
+        <p class="text-center text-sm text-gray-600">Belum punya akun? 
+            <button onclick="switchForm('register')" class="text-blue-600 font-semibold hover:underline">Daftar Sekarang</button>
+        </p>
+    </div>
+
+    <!-- KOTAK FORM PENDAFTARAN -->
+    <div id="registerBox" class="bg-white p-8 rounded shadow-xl w-96 absolute transition-all duration-300 transform scale-95 opacity-0 pointer-events-none -z-10">
+        <h2 class="text-2xl font-bold mb-6 text-center text-green-600">Daftar Akun Baru</h2>
+        
+        <input type="text" id="regName" placeholder="Nama Lengkap" class="border w-full p-2 mb-3 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+        <input type="text" id="regUser" placeholder="Username Pilihan" class="border w-full p-2 mb-3 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+        <input type="email" id="regEmail" placeholder="Alamat Email" class="border w-full p-2 mb-3 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+        <input type="password" id="regPass" placeholder="Password" class="border w-full p-2 mb-3 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+        <input type="password" id="regPassConfirm" placeholder="Konfirmasi Password" class="border w-full p-2 mb-6 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+        
+        <button onclick="handleRegister()" class="bg-green-600 text-white w-full py-2 rounded mb-4 font-bold hover:bg-green-700 transition duration-200">Buat Akun</button>
+        
+        <p class="text-center text-sm text-gray-600">Sudah punya akun? 
+            <button onclick="switchForm('login')" class="text-blue-600 font-semibold hover:underline">Masuk di sini</button>
+        </p>
+    </div>
+
+    <!-- KOTAK FORM LUPA PASSWORD -->
+    <div id="forgotBox" class="bg-white p-8 rounded shadow-xl w-96 absolute transition-all duration-300 transform scale-95 opacity-0 pointer-events-none -z-10">
+        <h2 class="text-2xl font-bold mb-2 text-center text-red-600">Lupa Password?</h2>
+        <p class="text-xs text-gray-500 text-center mb-6">Masukkan Username dan Email yang terdaftar untuk membuat password baru.</p>
+        
+        <input type="text" id="forUser" placeholder="Username Anda" class="border w-full p-2 mb-3 rounded focus:outline-none focus:ring-2 focus:ring-red-500">
+        <input type="email" id="forEmail" placeholder="Email Anda" class="border w-full p-2 mb-3 rounded focus:outline-none focus:ring-2 focus:ring-red-500">
+        
+        <hr class="my-4">
+        
+        <input type="password" id="forNewPass" placeholder="Password Baru" class="border w-full p-2 mb-3 rounded focus:outline-none focus:ring-2 focus:ring-red-500">
+        <input type="password" id="forNewPassConfirm" placeholder="Konfirmasi Password Baru" class="border w-full p-2 mb-6 rounded focus:outline-none focus:ring-2 focus:ring-red-500">
+        
+        <button onclick="handleReset()" class="bg-red-600 text-white w-full py-2 rounded mb-4 font-bold hover:bg-red-700 transition duration-200">Ganti Password</button>
+        
+        <p class="text-center text-sm text-gray-600">Ingat password Anda? 
+            <button onclick="switchForm('login')" class="text-blue-600 font-semibold hover:underline">Masuk di sini</button>
+        </p>
+    </div>
+
+    <script>
+        // Animasi perpindahan antar kotak
+        function switchForm(target) {
+            const forms = ['login', 'register', 'forgot'];
+            
+            forms.forEach(form => {
+                const el = document.getElementById(form + 'Box');
+                if (form === target) {
+                    el.classList.remove('scale-95', 'opacity-0', 'pointer-events-none', '-z-10');
+                    el.classList.add('scale-100', 'opacity-100', 'z-10');
+                } else {
+                    el.classList.add('scale-95', 'opacity-0', 'pointer-events-none', '-z-10');
+                    el.classList.remove('scale-100', 'opacity-100', 'z-10');
+                }
+            });
+        }
+
+        async function handleLogin() {
+            const user = document.getElementById('loginUser').value;
+            const pass = document.getElementById('loginPass').value;
+            if(!user || !pass) return alert("Username dan Password harus diisi!");
+
+            const res = await fetch('/api/auth/login', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: user, password: pass})
+            });
+            if(res.ok) window.location.replace('Halaman.html');
+            else alert("Gagal Login! Cek kembali username atau password Anda.");
+        }
+
+        async function handleRegister() {
+            const fullname = document.getElementById('regName').value;
+            const user = document.getElementById('regUser').value;
+            const email = document.getElementById('regEmail').value;
+            const pass = document.getElementById('regPass').value;
+            const passConfirm = document.getElementById('regPassConfirm').value;
+
+            if(!fullname || !user || !email || !pass || !passConfirm) return alert("Semua kolom harus diisi!");
+            if(pass !== passConfirm) return alert("Password tidak cocok!");
+
+            const res = await fetch('/api/auth/register', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({fullname, email, username: user, password: pass})
+            });
+            
+                if (res.ok) {
+                alert("Pendaftaran berhasil! Silakan login.");
+       
+                    // --- BARIS UNTUK PINDAH HALAMAN ---
+                    window.location.href = "login.html"; 
+       
+                 } else {
+                    const data = await res.json();
+                alert(data.error || "Gagal mendaftar, terjadi kesalahan sistem.");
+                 }
+        }
+        async function handleReset() {
+            const user = document.getElementById('forUser').value;
+            const email = document.getElementById('forEmail').value;
+            const newPass = document.getElementById('forNewPass').value;
+            const newPassConfirm = document.getElementById('forNewPassConfirm').value;
+
+            if(!user || !email || !newPass || !newPassConfirm) return alert("Semua kolom pemulihan harus diisi!");
+            if(newPass !== newPassConfirm) return alert("Password baru tidak cocok!");
+
+            const res = await fetch('/api/auth/reset-password', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username: user, email: email, newPassword: newPass })
+            });
+            
+            if(res.ok) {
+                alert("Berhasil! Password Anda telah diubah. Silakan Login dengan password baru.");
+                switchForm('login');
+            } else {
+                alert("Data tidak valid! Pastikan Username dan Email persis seperti saat mendaftar.");
+            }
+        }
+        // ==========================================
+        // FITUR TEKAN ENTER UNTUK LOGIN & REGISTER
+        // ==========================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+// --- 1. FITUR ENTER UNTUK LOGIN ---
+// Sesuaikan ID dengan yang ada di HTML Anda
+const loginUsername = document.getElementById('loginUser'); // Ganti id jika berbeda
+const loginPassword = document.getElementById('loginPass'); // Ganti id jika berbeda
+
+if (loginUsername && loginPassword) {
+    const jalankanLogin = (e) => {
+        if (e.key === 'Enter') {
+            // Cek apakah kedua kolom tidak kosong
+            if (loginUsername.value.trim() !== '' && loginPassword.value.trim() !== '') {
+                handleLogin(); // Pastikan nama fungsi login Anda adalah login()
+            }
+        }
+    };
+    loginUsername.addEventListener('keypress', jalankanLogin);
+    loginPassword.addEventListener('keypress', jalankanLogin);
+}
+
+// --- 2. FITUR ENTER UNTUK REGISTER (GAYA AWAL) ---
+const regFullname = document.getElementById('regName'); 
+            const regUsername = document.getElementById('regUser'); 
+            const regEmail = document.getElementById('regEmail');       
+            const regPassword = document.getElementById('regPass'); 
+            const regConfirm = document.getElementById('regPassConfirm'); // <-- Kotak ke-5
+
+            if (regFullname && regUsername && regEmail && regPassword && regConfirm) {
+                const jalankanRegister = (e) => {
+                    if (e.key === 'Enter') {
+                        // Cek apakah semua 5 kolom pendaftaran tidak kosong
+                        if (regFullname.value.trim() !== '' && 
+                            regUsername.value.trim() !== '' && 
+                            regEmail.value.trim() !== '' && 
+                            regPassword.value.trim() !== '' &&
+                            regConfirm.value.trim() !== '') {
+                            
+                             handleRegister(); // Pastikan nama fungsi Anda benar
+                        }
+                    }
+                };
+                
+                // Pasang pendengar ke masing-masing 5 kotak
+                regFullname.addEventListener('keypress', jalankanRegister);
+                regUsername.addEventListener('keypress', jalankanRegister);
+                regEmail.addEventListener('keypress', jalankanRegister);
+                regPassword.addEventListener('keypress', jalankanRegister);
+                regConfirm.addEventListener('keypress', jalankanRegister);
+            }
+});
+    </script>
+</body>
+</html>
