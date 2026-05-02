@@ -397,7 +397,7 @@
             const originalText = btnElement.innerText;
             btnElement.innerText = "...";
             try {
-                const res = await fetch(`http://localhost:3000/api/ai/${endpoint}`, {
+                const res = await fetch(`/api/ai/${endpoint}`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(bodyData)
                 });
