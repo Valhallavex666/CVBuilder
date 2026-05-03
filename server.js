@@ -187,7 +187,7 @@ app.post('/api/ai/skills', async (req, res) => {
 
 app.post('/api/ai/summary', async (req, res) => {
     const { skills } = req.body;
-    const prompt = `Buatkan deskripsi diri (Professional Summary) sepanjang 3 kalimat untuk CV tanpa menyebut nama, Saya seorang dengan keahlian ${skills}. Buat profesional dan berorientasi pada hasil (ATS friendly) Menggunakan bahasa indonesia.`;
+    const prompt = `Buatkan deskripsi diri (Professional Summary) sepanjang 3 kalimat untuk CV tanpa menyebut nama, misal Saya seorang dengan keahlian ${skills}. Buat secara profesional dan berorientasi pada hasil (ATS friendly) Menggunakan bahasa indonesia dan tanpa kalimat pembuka.`;
     const result = await askAI(prompt);
     res.json({ text: result });
 });
