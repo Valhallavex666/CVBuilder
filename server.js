@@ -166,21 +166,28 @@ app.post('/api/auth/reset-password', async (req, res) => {
 // --- 5. API AI CV ---
 app.post('/api/ai/job-desc', async (req, res) => {
     const { title, company } = req.body;
-    const prompt = `Buatkan 3 poin deskripsi pekerjaan profesional untuk posisi ${title} di ${company}. Langsung poin saja dengan '-'.`;
+    const prompt = `Buatkan 3 poin deskripsi pekerjaan profesional, padat, dan singkat untuk posisi ${title} di perusahaan ${company} (ramah ATS). 
+    ATURAN KETAT:
+    1. Berikan HANYA 3 poin.
+    2. Awali setiap poin dengan simbol '- ' (strip).
+    3. DILARANG memberikan kalimat pembuka, basa-basi, atau kalimat penutup. Langsung ke poinnya saja.`;
     const result = await askAI(prompt);
     res.json({ text: result });
 });
 
 app.post('/api/ai/skills', async (req, res) => {
     const { jobs, education } = req.body;
-    const prompt = `Daftar 6-8 hard skills untuk pengalaman ${jobs} dan pendidikan ${education}. Hanya nama skill pisah koma.`;
+    const prompt = `Berdasarkan pengalaman kerja sebagai ${jobs} dan pendidikan di ${education}, buatkan daftar 6-8 kemampuan teknis (hard skills) kunci.
+    ATURAN KETAT:
+    1. HANYA berikan nama skill, pisahkan dengan koma. (Contoh: HTML, CSS, Node.js).
+    2. DILARANG menggunakan kalimat pembuka, penutup, atau penjelasan panjang.`;
     const result = await askAI(prompt);
     res.json({ text: result });
 });
 
 app.post('/api/ai/summary', async (req, res) => {
     const { skills } = req.body;
-    const prompt = `Buatkan professional summary 3 kalimat untuk keahlian ${skills}. Bahasa Indonesia, tanpa nama.`;
+    const prompt = `Buatkan deskripsi diri (Professional Summary) sepanjang 3 kalimat untuk CV tanpa menyebut nama, Saya seorang dengan keahlian ${skills}. Buat profesional dan berorientasi pada hasil (ATS friendly) Menggunakan bahasa indonesia.`;
     const result = await askAI(prompt);
     res.json({ text: result });
 });
